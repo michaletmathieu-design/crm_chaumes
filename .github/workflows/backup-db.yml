@@ -12,8 +12,13 @@ jobs:
     steps:
       - name: Installer PostgreSQL Client v17
         run: |
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg
-          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          # 1. Télécharger la clé de sécurité (curl arrête tout si ça rate)
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg
+          
+          # 2. Ajouter le dépôt EN LIANT EXPLICITEMENT LA CLÉ (signed-by)
+          echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          
+          # 3. Mettre à jour et installer v17
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
 
