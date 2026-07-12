@@ -6,32 +6,32 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String         @id @default(cuid())
+  email         String         @unique
   passwordHash  String
   firstName     String
   lastName      String
-  role          String    @default("COMMERCIAL")
+  role          String         @default("COMMERCIAL")
   bands         UserBand[]
-  prospects     Prospect[]
   accounts      Account[]
   sessions      Session[]
-  tasks Task[]
-  createdAt     DateTime  @default(now())
+  tasks         Task[]
+  opportunities Opportunity[]
+  createdAt     DateTime       @default(now())
 }
 
 model Band {
-  id           String    @id @default(cuid())
+  id           String         @id @default(cuid())
   name         String
   genre        String
   minFee       Int
   suggestedFee Int
   members      UserBand[]
-  createdAt    DateTime  @default(now())
-  events      Event[]
-  documents Document[]
-   quotes Quote[]
+  documents    Document[]
+  opportunities Opportunity[]
+  createdAt    DateTime       @default(now())
 }
 
 model UserBand {
@@ -44,61 +44,93 @@ model UserBand {
 }
 
 model Prospect {
-  id              String        @id @default(cuid())
-  name            String
-  contactName     String?       // Nom du contact
-  phone           String?       // Telephone
-  email           String?       // Email
-  address         String?       // Adresse precise
-  city            String
-  venueType       String
-  capacity        Int?          // Jauge de la salle
-  minFee          Int?          // Fourchette basse
-  maxFee          Int?          // Fourchette haute
-  commercialScore Int           @default(0)
-  stage           String        @default("NEW")
-  assignedToId    String?
-  assignedTo      User?         @relation(fields: [assignedToId], references: [id])
-  interactions    Interaction[]
-  tasks           Task[]
-  events          Event[]
-  quotes          Quote[]
-  documents Document[]
-  createdAt       DateTime      @default(now())
+  id          String        @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  city        String
+  venueType   String
+  capacity    Int?
+  minFee      Int?
+  maxFee      Int?
+  opportunities Opportunity[] 
+  documents     Document[]
+  createdAt     DateTime      @default(now())
 }
+
+model Opportunity {
+  id            String    @id @default(cuid())
+  prospectId    String
+  bandId        String
+  assignedToId  String?
+  stage         String    @default("NEW")
+  prospect      Prospect    @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  band          Band        @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  assignedTo    User?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  interactions  Interaction[]
+  tasks         Task[]
+  quotes        Quote[]
+  events        Event[]
+  @@unique([prospectId, bandId])
+}
+
 model Interaction {
-  id          String   @id @default(cuid())
-  prospectId  String
-  type        String   // PHONE, EMAIL, NOTE, MEETING
-  content     String
-  date        DateTime @default(now())
-  
-  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  opportunityId String
+  type          String
+  content       String
+  date          DateTime    @default(now())
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  title         String
+  type          String       @default("FOLLOW_UP")
+  priority      String       @default("MEDIUM")
+  dueDate       DateTime
+  isCompleted   Boolean      @default(false)
+  opportunityId String?
+  assignedToId  String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  assignedTo    User?        @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
 }
 model Event {
-  id            String    @id @default(cuid())
-  bandId        String
-  prospectId    String
+  id            String      @id @default(cuid())
+  opportunityId String
   optionDate1   DateTime
   optionDate2   DateTime?
   confirmedDate DateTime?
-  status        String    @default("OPTION_1") // OPTION_1, OPTION_2, CONFIRMED, CANCELED
-  grossFee      Int       @default(0)
-  band          Band      @relation(fields: [bandId], references: [id])
-  prospect      Prospect  @relation(fields: [prospectId], references: [id])
-  createdAt     DateTime  @default(now())
+  status        String      @default("OPTION_1")
+  grossFee      Int         @default(0)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
 }
+
 model Quote {
+  id            String      @id @default(cuid())
+  number        String      @unique
+  amount        Int
+  status        String      @default("DRAFT")
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+}
+
+model Document {
   id          String   @id @default(cuid())
-  number      String   @unique
-  amount      Int
-  status      String   @default("DRAFT")
-  prospectId  String
-  bandId      String
-  prospect    Prospect @relation(fields: [prospectId], references: [id])
-  band        Band     @relation(fields: [bandId], references: [id])
+  name        String
+  category    String
+  fileUrl     String
+  prospectId  String?
+  prospect    Prospect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+  bandId      String?
+  band        Band?     @relation(fields: [bandId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 }
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -113,7 +145,6 @@ model Account {
   id_token          String?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([provider, providerAccountId])
 }
 
@@ -129,30 +160,5 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-
   @@unique([identifier, token])
-}
-model Task {
-  id           String    @id @default(cuid())
-  title        String
-  type         String    @default("FOLLOW_UP")
-  priority     String    @default("MEDIUM")
-  dueDate      DateTime
-  isCompleted  Boolean   @default(false)
-  prospectId   String?
-  prospect     Prospect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
-  assignedToId String?
-  assignedTo   User?     @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdAt    DateTime  @default(now())
-}
-model Document {
-  id          String   @id @default(cuid())
-  name        String
-  category    String
-  fileUrl     String
-  prospectId  String?
-  prospect Prospect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
-  bandId      String?
-  band        Band?     @relation(fields: [bandId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
 }

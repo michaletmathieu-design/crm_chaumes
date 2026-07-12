@@ -5,22 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, Music, CalendarDays, FileText, FolderOpen, Search, Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { SearchCommand } from "@/components/search-command";
-import { Sparkles } from "lucide-react";
-
+import { LayoutDashboard, Users, Music, CalendarDays, FileText, FolderOpen, Search, Settings, LogOut, MapPin, Sparkles } from "lucide-react";
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Pipeline", href: "/opportunities", icon: Users }, // Le Kanban des opportunités
+  { name: "Lieux / Prospects", href: "/prospects", icon: MapPin }, // Le carnet d'adresses
   { name: "Groupes", href: "/bands", icon: Music },
-  { name: "CRM", href: "/prospects", icon: Users },
   { name: "Agenda", href: "/calendar", icon: CalendarDays },
   { name: "Devis", href: "/quotes", icon: FileText },
   { name: "Documents", href: "/documents", icon: FolderOpen },
-{ name: "Prospection IA", href: "/prospection", icon: Sparkles },
+  { name: "Prospection IA", href: "/prospection", icon: Sparkles },
+  { name: "Utilisateurs", href: "/users", icon: Settings, adminOnly: true },
 ];
-
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -51,13 +50,29 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <p className="text-xs text-muted-foreground">Les Productions</p>
         </div>
       </div>
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent hover:text-accent-foreground", pathname === item.href ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground")}>
-            <item.icon className="h-4 w-4" />
-            {item.name}
-          </Link>
-        ))}
+            <nav className="flex-1 space-y-1">
+        {navItems
+          .filter((item) => {
+            if ("adminOnly" in item && item.adminOnly) {
+              return session?.user?.role === "ADMIN";
+            }
+            return true;
+          })
+          .map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent hover:text-accent-foreground",
+                pathname === item.href
+                  ? "bg-accent text-accent-foreground font-medium"
+                  : "text-muted-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.name}
+            </Link>
+          ))}
       </nav>
       <Separator className="my-4" />
       <button onClick={() => signOut()} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left">

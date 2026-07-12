@@ -5,8 +5,8 @@ import { Users, CheckCircle, Music, MessageSquare } from "lucide-react";
 export default async function Home() {
   // On calcule les vraies statistiques depuis la base de donnees
   const totalProspects = await prisma.prospect.count();
-  const confirmedProspects = await prisma.prospect.count({ where: { stage: "CONFIRMED" } });
-  const toContact = await prisma.prospect.count({ where: { stage: "TO_CONTACT" } });
+  const confirmedProspects = await prisma.opportunity.count({ where: { stage: "CONFIRMED" } });
+  const toContact = await prisma.opportunity.count({ where: { stage: "TO_CONTACT" } });
   const totalBands = await prisma.band.count();
   const totalInteractions = await prisma.interaction.count();
 

@@ -2,6 +2,7 @@ import MainLayout from "@/components/layout/main-layout";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 
 // Fonction qui ajoute le groupe en base de donnees
 async function addGroup(formData: FormData) {
@@ -18,7 +19,18 @@ async function addGroup(formData: FormData) {
 }
 
 export default async function BandsPage() {
-  const groups = await prisma.band.findMany();
+  const session = await auth();
+
+  // Le commercial ne voit que ses groupes, l'admin voit tout
+  const groups = session?.user?.role === "ADMIN"
+    ? await prisma.band.findMany()
+    : await prisma.band.findMany({
+        where: {
+          members: {
+            some: { userId: session!.user!.id }
+          }
+        }
+      });
 
   return (
     <MainLayout>
@@ -29,28 +41,30 @@ export default async function BandsPage() {
         </div>
       </div>
       
-      {/* Le formulaire d'ajout */}
-      <form action={addGroup} className="bg-card border rounded-lg p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-        <div>
-          <label className="text-xs text-muted-foreground">Nom du groupe</label>
-          <input type="text" name="name" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="Ex: Les Soucoupes Volantes" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Style musical</label>
-          <input type="text" name="genre" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="Ex: Rock" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Cachet min (EUR)</label>
-          <input type="number" name="minFee" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="1000" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Cachet conseille (EUR)</label>
-          <input type="number" name="suggestedFee" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="1500" />
-        </div>
-        <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 h-[42px]">
-          + Ajouter
-        </button>
-      </form>
+      {/* Le formulaire d'ajout est réservé à l'ADMIN */}
+      {session?.user?.role === "ADMIN" && (
+        <form action={addGroup} className="bg-card border rounded-lg p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <div>
+            <label className="text-xs text-muted-foreground">Nom du groupe</label>
+            <input type="text" name="name" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="Ex: Les Soucoupes Volantes" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Style musical</label>
+            <input type="text" name="genre" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="Ex: Rock" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Cachet min (EUR)</label>
+            <input type="number" name="minFee" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="1000" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Cachet conseille (EUR)</label>
+            <input type="number" name="suggestedFee" required className="w-full mt-1 bg-background border rounded-md px-3 py-2 text-sm" placeholder="1500" />
+          </div>
+          <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 h-[42px]">
+            + Ajouter
+          </button>
+        </form>
+      )}
 
       {/* La liste des groupes */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

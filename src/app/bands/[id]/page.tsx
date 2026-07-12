@@ -2,18 +2,38 @@ import MainLayout from "@/components/layout/main-layout";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import UploadDocuments from "./upload-documents";
+import { auth } from "@/auth";
+import DeleteBandButton from "./delete-band-button";
 
 export default async function BandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   
+  // 1. On vérifie l'auth AVANT tout
+  const session = await auth();
+
   const band = await prisma.band.findUnique({ 
     where: { id },
     include: { documents: { orderBy: { createdAt: 'desc' } } }
   });
 
   if (!band) notFound();
+
+  // 2. Sécurité : Si c'est un commercial, on vérifie qu'il est bien lié à ce groupe
+  if (session?.user?.role === "COMMERCIAL") {
+    const isAssigned = await prisma.userBand.findFirst({
+      where: { 
+        userId: session.user.id, 
+        bandId: id 
+      }
+    });
+    
+    // S'il n'est pas assigné, on le renvoie sur la liste des groupes
+    if (!isAssigned) {
+      redirect("/bands");
+    }
+  }
 
   return (
     <MainLayout>
@@ -23,6 +43,11 @@ export default async function BandDetailPage({ params }: { params: Promise<{ id:
         </Link>
         <h2 className="text-3xl font-bold tracking-tight">{band.name}</h2>
         <p className="text-muted-foreground mt-1">{band.genre}</p>
+        {session?.user?.role === "ADMIN" && (
+          <div className="mt-4">
+            <DeleteBandButton bandId={band.id} bandName={band.name} />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
