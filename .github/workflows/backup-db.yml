@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: Installer PostgreSQL Client v17
         run: |
-          # 1. Télécharger la clé de sécurité (curl arrête tout si ça rate)
+          # 1. Télécharger la clé de sécurité
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg
           
-          # 2. Ajouter le dépôt EN LIANT EXPLICITEMENT LA CLÉ (signed-by)
+          # 2. Ajouter le dépôt EN LIANT EXPLICITEMENT LA CLÉ
           echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           
           # 3. Mettre à jour et installer v17
@@ -27,7 +27,8 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           FILENAME="crm-backup-$(date +%Y-%m-%d_%H-%M-%S).dump"
-          pg_dump "$DATABASE_URL" --no-owner --no-acl -F c -f $FILENAME
+          # SÉCURITÉ : On force l'utilisation du pg_dump v17 pour éviter tout conflit
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --no-owner --no-acl -F c -f $FILENAME
           echo "Fichier créé : $FILENAME"
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
 
@@ -39,6 +40,7 @@ jobs:
         run: |
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-          aws configure set default.region auto
+          # R2 exige une région standard pour le CLI AWS, l'endpoint URL redirige au bon endroit
+          aws configure set default.region us-east-1
           aws s3 cp $FILENAME s3://backup-crm-chaumes/db/ --endpoint-url "$AWS_ENDPOINT_URL"
           echo "Backup envoyé avec succès sur Cloudflare R2 !"
