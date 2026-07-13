@@ -43,7 +43,7 @@ export async function createUser(prevState: { error?: string }, formData: FormDa
       firstName,
       lastName,
       role,
-      members: role === "MUSICIAN" && bandIds.length > 0
+      bands: role === "MUSICIAN" && bandIds.length > 0
         ? { create: bandIds.map(bandId => ({ bandId })) }
         : undefined,
     },
