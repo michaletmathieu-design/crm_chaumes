@@ -61,8 +61,7 @@ export default async function Home() {
               {recentProspects.map((p) => (
                 <tr key={p.id} className="border-b last:border-0">
                   <td className="py-3 font-medium">{p.name}</td>
-                  <td className="py-3 text-muted-foreground">{p.city}</td>
-                  <td className="py-3"><span className="bg-muted px-2 py-0.5 rounded text-xs">{p.stage}</span></td>
+                  <td className="py-3 text-muted-foreground">{p.city}</td>                  
                 </tr>
               ))}
             </tbody>
