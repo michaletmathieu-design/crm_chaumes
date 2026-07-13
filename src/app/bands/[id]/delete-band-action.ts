@@ -13,9 +13,6 @@ export async function deleteBand(bandId: string) {
 
   // Suppression en cascade manuelle des dépendances
   await prisma.document.deleteMany({ where: { bandId } });
-  await prisma.quote.deleteMany({ where: { bandId } });
-  await prisma.event.deleteMany({ where: { bandId } });
-
   await prisma.band.delete({ where: { id: bandId } });
 
   revalidatePath("/bands");
