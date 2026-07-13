@@ -14,14 +14,21 @@ export async function GET(request: Request) {
       prisma.quote.findMany({ 
         where: { number: { contains: query } }, 
         take: 3, 
-        include: { band: true, prospect: true } 
+		include: { 
+		  opportunity: { 
+			include: { 
+			  band: true, 
+			  prospect: true 
+			} 
+		  } 
+		}
       }),
     ]);
 
     const results = [
       ...bands.map(b => ({ id: b.id, type: "Groupe", name: b.name, href: `/bands/${b.id}` })),
       ...prospects.map(p => ({ id: p.id, type: "Prospect", name: `${p.name} (${p.city})`, href: `/prospects/${p.id}` })),
-      ...quotes.map(q => ({ id: q.id, type: "Devis", name: `${q.number} - ${q.band.name}`, href: "/quotes" })),
+      ...quotes.map(q => ({ id: q.id, type: "Devis", name: `${q.number} - ${q.opportunity.band.name}`, href: "/quotes" })),
     ];
 
     return NextResponse.json(results);
