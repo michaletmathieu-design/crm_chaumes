@@ -31,7 +31,7 @@ export class GooglePlacesAPI {
     const coordinates = await this.getCityCoordinates(city);
 
     // 2. On mélange les murs et les organisateurs potentiels pour être exhaustif
-        const queries = venueType === "Tout Type" 
+    const queries = venueType === "Tout Type" 
       ? [
           `bar musique live "${city}"`,      // Cible les vrais bars musicaux
           `guinguette concert "${city}"`,     // Cible les guinguettes
@@ -43,6 +43,7 @@ export class GooglePlacesAPI {
           `${venueType} musique live "${city}"`,
           `${venueType} concert "${city}"`
         ];
+        
     // 3. On lance TOUTES les requêtes Google en même temps (avec le radius à 80km)
     const searchPromises = queries.map(query => this.searchGoogle(query, coordinates, city, 30));
     const results = await Promise.all(searchPromises);
@@ -50,7 +51,7 @@ export class GooglePlacesAPI {
     // 4. On aplatit le tableau
     let allPlaces = results.flat();
 
-    // 5. On supprime les doublons
+    // 5. On supprime les doublons Google
     const uniquePlaces = allPlaces.filter((place, index, self) => 
       index === self.findIndex((p) => p.place_id === place.place_id)
     );
@@ -58,7 +59,7 @@ export class GooglePlacesAPI {
     // 6. On limite à 200 lieux max pour pas exploser la facture OpenAI
     const limitedPlaces = uniquePlaces.slice(0, maxResults);
 
-    // 7. Récupération des détails (avis)
+    // 7. Récupération des détails (avis ET TYPES pour le filtre dur)
     const placesWithDetails = await Promise.all(
       limitedPlaces.map(place => this.getPlaceDetails(place.place_id))
     );
@@ -109,7 +110,8 @@ export class GooglePlacesAPI {
     try {
       const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
       url.searchParams.append("place_id", placeId);
-      url.searchParams.append("fields", "name,formatted_address,formatted_phone_number,website,reviews");
+      // J'AI AJOUTÉ "types" ICI POUR LE FILTRE RESTAURANT/MJC
+      url.searchParams.append("fields", "name,formatted_address,formatted_phone_number,website,reviews,types");
       url.searchParams.append("key", this.apiKey);
       url.searchParams.append("language", "fr");
 

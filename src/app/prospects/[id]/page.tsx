@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import EditProspectPanel from "./edit-prospect-panel";
 
 const stageConfig: Record<string, { label: string; className: string }> = {
   NEW: { label: "Nouveau", className: "bg-gray-100 text-gray-700" },
@@ -52,65 +53,17 @@ export default async function ProspectDetailPage({ params }: { params: Promise<{
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Colonne de gauche : Infos du lieu */}
-        <div className="md:col-span-1 space-y-4">
-          <div className="rounded-lg border bg-card p-4">
-            <h3 className="font-semibold mb-3 text-sm">Informations du lieu</h3>
-            <div className="space-y-3 text-sm">
-              {prospect.contactName && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{prospect.contactName}</span>
-                </div>
-              )}
-              {prospect.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{prospect.phone}</span>
-                </div>
-              )}
-              {prospect.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{prospect.email}</span>
-                </div>
-              )}
-              {prospect.city && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{prospect.city}</span>
-                </div>
-              )}
-            </div>
-          </div>
+              <div className="grid gap-6 md:grid-cols-3">
+        
+        {/* Colonne de gauche : Gérée par le nouveau composant modifiable */}
+        <EditProspectPanel prospect={prospect} />
 
-          <div className="rounded-lg border bg-card p-4">
-            <h3 className="font-semibold mb-3 text-sm">Détails</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Type</span>
-                <span>{prospect.venueType}</span>
-              </div>
-              {prospect.capacity && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Jauge</span>
-                  <span>{prospect.capacity} places</span>
-                </div>
-              )}
-              {prospect.minFee && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Budget Min</span>
-                  <span>{prospect.minFee} EUR</span>
-                </div>
-              )}
-              {prospect.maxFee && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Budget Max</span>
-                  <span>{prospect.maxFee} EUR</span>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Colonne de droite : Les Opportunités liées (GARDE TON CODE EXACT) */}
+        <div className="md:col-span-2 space-y-4">
+           {/* ... ton code des opportunités sans y toucher ... */}
         </div>
+        
+      </div>
 
         {/* Colonne de droite : Les Opportunités liées */}
         <div className="md:col-span-2 space-y-4">

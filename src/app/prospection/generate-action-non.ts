@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// FONCTION MAGIQUE : Transforme "Café de la Place" en "Cafe de la Place" (Pur ASCII)
 function toAscii(str: string): string {
   if (!str) return "";
   return str
@@ -33,7 +34,7 @@ export async function generateLeads(formData: FormData) {
       return { success: false, error: "Aucun lieu trouve sur Google Maps pour cette zone." };
     }
 
-    // FILTRE ANTI-DOUBLON BDD (Géré par le code, l'IA n'est pas au courant)
+    // --- FILTRE ANTI-DOUBLON STRICT (NOM + VILLE) ---
     const existingProspects = await prisma.prospect.findMany({
       where: { city: { equals: city, mode: "insensitive" } },
       select: { name: true, city: true }
@@ -43,11 +44,13 @@ export async function generateLeads(formData: FormData) {
       const existingRefs = new Set(
         existingProspects.map(p => toAscii(p.name) + toAscii(p.city))
       );
+
       rawPlaces = rawPlaces.filter(place => {
         const placeRef = toAscii(place.name) + toAscii(city);
         return !existingRefs.has(placeRef);
       });
     }
+    // --------------------------------------------------------
 
     const csv = await enrichAndFormatWithAI(rawPlaces, city, venueType, style, quantity);
     return { success: true, csv };
@@ -75,39 +78,109 @@ Lieu ${index + 1}:
 -------------------------------------`;
   }).join('\n');
 
-  // PROMPT OPTIMISE : COURT, DIRECT, SANS CONTRADICTION
-  const prompt = toAscii(`Tu es un expert en prospection musicale.
-Ta mission : transformer une liste de lieux bruts en prospects qualifiés pour des concerts.
+  const prompt = toAscii(`REGLE DE RECHERCHE PRIORITAIRE :
 
-REGLE N°1 : CRITERE MUSICAL STRICT (LA PLUS IMPORTANTE)
-Un lieu ne doit etre dans le CSV QUE s'il fait des concerts, de la musique live, ou s'il est organisateur d'evenements musicaux.
-- Mairies, Comites des fetes, Festivals, MJC, Campings : Acceptes par defaut.
-- Bars, Pubs, Guinguettes : Acceptes si musique live ou scene (sauf si avis dit "calme" ou "tabac").
-- RESTAURANTS : REFUSES SYSTEMATIQUEMENT sauf si un avis explicite dit "groupe live" ou "scene".
-Si aucun indice de concert : Tu supprimes le lieu de la liste.
+Ton objectif est d'obtenir ${quantity} prospects commerciaux réels.
 
-REGLE N°2 : QUANTITE ET ELARGISSEMENT GEOGRAPHIQUE
-Tu dois fournir ${quantity} lignes de prospects valides.
-La liste fournie ci-dessous est issue d'une recherche restreinte autour de ${toAscii(city)}.
-Si elle ne contient pas assez de lieux valides :
-- Utilise tes propres connaissances pour ajouter de VRAIS lieux correspondant a la demande.
-- Elargis le perimetre progressivement : communes limitrophes -> canton -> departement -> departements voisins (jusqu'a 100km si necessaire).
-- Ne t'arrete pas d'elargir tant que tu n'as pas ${quantity} lignes valides.
-- INTERDIT d'inventer un lieu fictif ou de mettre un restaurant sans concert pour remplir.
+Tu ne dois PAS supprimer une structure uniquement parce qu'aucune programmation musicale récente n'est trouvée.
 
-REGLE N°3 : TRANSFORMATION
-Identifie l'organisateur reel (ex: "Salle des fetes de X" -> "Mairie de X"). Conserve le nom pour les bars/restaurants.
+La validation dépend du type de structure.
 
-REGLE N°4 : DONNEES ET FORMAT
-- Telephone et Site Web : Uniquement si connus. Sinon, laisse vide.
-- Email : TOUJOURS VIDE.
-- Jauge et Cachet : Estimations realistes selon le type de lieu.
-- Priorite : Haute, Moyenne ou Faible selon le potentiel.
-- Format : CSV pur. Separateur ;. 13 colonnes exactes. Aucun texte, aucun accent, aucun retour a la ligne dans les cellules.
-- En-tete obligatoire : Nom;Ville;Type;Contact;Telephone;Email;Site Web;Jauge;Cachet Min;Cachet Max;Derniere programmation connue;Source;Priorite
+==================================================
+NIVEAU 1 : ORGANISATEURS DE SPECTACLES
+==================================================
 
-DONNEES D'ENTREE A TRAITER :
+Conserver automatiquement :
+
+- Mairies
+- Comités des fêtes
+- Associations culturelles
+- Associations événementielles
+- Offices de tourisme
+- MJC
+- Centres culturels
+- Campings
+- Festivals
+- Bases de loisirs
+- Stations touristiques
+
+Ces structures sont considérées comme acheteurs potentiels même sans preuve de concert récente.
+
+==================================================
+NIVEAU 2 : LIEUX COMMERCIAUX
+==================================================
+
+Bars :
+Conserver si :
+- connus localement
+- adaptés à la musique live
+- ou présence d'animations
+
+Pubs :
+Conserver si :
+- ambiance musicale
+- concerts réguliers
+- animations
+
+Guinguettes :
+Conserver par défaut.
+
+Restaurants :
+Conserver uniquement si :
+- concert
+- soirée musicale
+- animation live
+
+Hôtels :
+Conserver uniquement si :
+- événementiel
+- animation
+- capacité d'accueil
+
+==================================================
+STRATEGIE SI MANQUE DE RESULTATS
+==================================================
+
+Ne jamais arrêter parce que la première recherche est courte.
+
+Procéder ainsi :
+
+Ville cible ${city}
+
+Puis rayon :
+20 km
+50 km
+100 km
+150 km
+
+A chaque étape :
+- ajouter uniquement des prospects réels
+- conserver les structures organisatrices même sans historique visible
+- supprimer uniquement les lieux hors cible
+
+L'objectif de quantité ${quantity} doit être atteint avant d'abandonner.
+
+==================================================
+INTERDICTION
+==================================================
+
+Il est interdit :
+- d'inventer un lieu
+- d'inventer un numéro
+- d'inventer un email
+- d'inventer une programmation
+
+Mais il est autorisé :
+- d'ajouter une mairie réelle
+- d'ajouter un comité des fêtes réel
+- d'ajouter une association réelle
+- d'ajouter un lieu touristique réel
+
+même sans preuve musicale récente.
+
+
  ${contextData}`);
+  
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",

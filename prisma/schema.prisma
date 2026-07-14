@@ -54,6 +54,7 @@ model Prospect {
   capacity    Int?
   minFee      Int?
   maxFee      Int?
+  status      String        @default("ACTIVE") // Valeurs possibles : ACTIVE, INACTIVE, TO_CHECK
   opportunities Opportunity[] 
   documents     Document[]
   createdAt     DateTime      @default(now())
