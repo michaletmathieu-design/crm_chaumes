@@ -18,7 +18,7 @@ const navItems = [
   { name: "Agenda", href: "/calendar", icon: CalendarDays },
   { name: "Devis", href: "/quotes", icon: FileText },
   { name: "Documents", href: "/documents", icon: FolderOpen },
-  { name: "Prospection IA", href: "/prospection", icon: Sparkles },
+  { name: "Prospection IA", href: "/prospection", icon: Sparkles, adminOnly: true },
   { name: "Utilisateurs", href: "/users", icon: Settings, adminOnly: true },
 ];
 
@@ -26,7 +26,7 @@ const navItems = [
 const mobileNavItems = [
   { name: "Pipeline", href: "/opportunities", icon: Users },
   { name: "Prospects", href: "/prospects", icon: MapPin },
-  { name: "Prospection", href: "/prospection", icon: Sparkles },
+  { name: "Prospection", href: "/prospection", icon: Sparkles, adminOnly: true },
   { name: "Agenda", href: "/calendar", icon: CalendarDays },
 ];
 
@@ -127,22 +127,29 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* BARRE DE NAVIGATION MOBILE (Fixée en bas, cachée sur ordinateur) */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around bg-background border-t h-16 px-2">
-          {mobileNavItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
-                  isActive ? "text-primary font-medium" : "text-muted-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="text-[10px]">{item.name}</span>
-              </Link>
-            );
-          })}
+          {mobileNavItems
+            .filter((item) => {
+              if ("adminOnly" in item && item.adminOnly) {
+                return session?.user?.role === "ADMIN";
+              }
+              return true;
+            })
+            .map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+                    isActive ? "text-primary font-medium" : "text-muted-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-[10px]">{item.name}</span>
+                </Link>
+              );
+            })}
         </nav>
       </div>
 
