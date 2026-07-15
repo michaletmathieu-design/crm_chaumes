@@ -5,8 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import EditProspectPanel from "./edit-prospect-panel";
+import AssignCommercial from "./assign-commercial";
 
-const stageConfig: Record<string, { label: string; className: string }> = {
+type StageInfo = { label: string; className: string };
+
+const stageConfig: { [key: string]: StageInfo } = {
   NEW: { label: "Nouveau", className: "bg-gray-100 text-gray-700" },
   TO_CONTACT: { label: "À contacter", className: "bg-blue-100 text-blue-700" },
   FIRST_EXCHANGE: { label: "Premier échange", className: "bg-indigo-100 text-indigo-700" },
@@ -19,7 +22,6 @@ export default async function ProspectDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const session = await auth();
 
-  // On filtre les opportunités directement dans la requête si c'est un commercial
   const opportunityFilter = session?.user?.role === "COMMERCIAL"
     ? { band: { members: { some: { userId: session.user.id } } } }
     : {};
@@ -41,6 +43,11 @@ export default async function ProspectDetailPage({ params }: { params: Promise<{
 
   if (!prospect) notFound();
 
+  const allUsers = await prisma.user.findMany({
+    select: { id: true, firstName: true, lastName: true },
+    orderBy: { firstName: "asc" }
+  });
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -52,20 +59,8 @@ export default async function ProspectDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Colonne de gauche : Infos du lieu */}
-              <div className="grid gap-6 md:grid-cols-3">
-        
-        {/* Colonne de gauche : Gérée par le nouveau composant modifiable */}
         <EditProspectPanel prospect={prospect} />
 
-        {/* Colonne de droite : Les Opportunités liées (GARDE TON CODE EXACT) */}
-        <div className="md:col-span-2 space-y-4">
-           {/* ... ton code des opportunités sans y toucher ... */}
-        </div>
-        
-      </div>
-
-        {/* Colonne de droite : Les Opportunités liées */}
         <div className="md:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-lg">Opportunités liées ({prospect.opportunities.length})</h3>
@@ -99,13 +94,18 @@ export default async function ProspectDetailPage({ params }: { params: Promise<{
                       </span>
                     </div>
 
-                    <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
-                      <div className="flex justify-between">
-                        <span>Assigné à</span>
-                        <span className="font-medium text-foreground">
-                          {opp.assignedTo ? `${opp.assignedTo.firstName} ${opp.assignedTo.lastName}` : "Non assigné"}
-                        </span>
+                    <div className="text-xs text-muted-foreground space-y-2 border-t pt-3">
+                      
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">Géré par :</span>
+                        <AssignCommercial 
+                          opportunityId={opp.id} 
+                          prospectId={prospect.id}
+                          users={allUsers} 
+                          currentAssigned={opp.assignedTo} 
+                        />
                       </div>
+
                       <div className="flex justify-between">
                         <span>Échanges</span>
                         <span className="font-medium text-foreground">{opp._count.interactions}</span>
