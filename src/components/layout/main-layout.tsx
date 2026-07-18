@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { SearchCommand } from "@/components/search-command";
 import { LayoutDashboard, Users, Music, CalendarDays, FileText, FolderOpen, Search, Settings, LogOut, MapPin, Sparkles } from "lucide-react";
+import NotificationBell from "@/components/layout/notification-bell";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -113,6 +114,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
           
           <div className="flex items-center gap-2">
+		   <NotificationBell />
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                 {session?.user?.name?.split(' ').map((n) => n[0]).join('').toUpperCase()}

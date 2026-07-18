@@ -2,6 +2,8 @@ import MainLayout from "@/components/layout/main-layout";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 async function addEvent(formData: FormData) {
   "use server";
@@ -26,8 +28,26 @@ async function addEvent(formData: FormData) {
   revalidatePath("/calendar");
 }
 
-export default async function CalendarPage() {
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; year?: string }> }) {
+  const params = await searchParams;
   const session = await auth();
+
+  // NOUVEAU : On lit le mois et l'année depuis l'URL, sinon on prend le mois actuel
+  const today = new Date();
+  const month = parseInt(params.month || (today.getMonth() + 1).toString()) - 1; // -1 car JS compte de 0 à 11
+  const year = parseInt(params.year || today.getFullYear().toString());
+
+  // NOUVEAU : Calcul des mois précédents et suivants pour les boutons
+  const prevDate = new Date(year, month - 1, 1);
+  const nextDate = new Date(year, month + 1, 1);
+  const prevMonth = prevDate.getMonth() + 1;
+  const prevYear = prevDate.getFullYear();
+  const nextMonth = nextDate.getMonth() + 1;
+  const nextYear = nextDate.getFullYear();
+
+  // Affichage du nom du mois en français
+  const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const monthName = monthNames[month];
 
   // Filtre de sécurité : le commercial ne voit que les événements de ses groupes
   const eventFilter = session?.user?.role === "COMMERCIAL"
@@ -61,9 +81,6 @@ export default async function CalendarPage() {
     orderBy: { id: "desc" },
   });
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
@@ -73,12 +90,30 @@ export default async function CalendarPage() {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Agenda</h2>
-          <p className="text-muted-foreground">
-            {today.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} 
-            {session?.user?.role === "COMMERCIAL" && <span className="text-xs ml-2">(Mes groupes uniquement)</span>}
-          </p>
+        <div className="flex items-center gap-4">
+          {/* NOUVEAU : Bouton Mois Précédent */}
+          <Link 
+            href={`?month=${prevMonth}&year=${prevYear}`} 
+            className="p-2 rounded-md border bg-card hover:bg-accent transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight capitalize">{monthName} {year}</h2>
+            <p className="text-muted-foreground">
+              Agenda
+              {session?.user?.role === "COMMERCIAL" && <span className="text-xs ml-2">(Mes groupes uniquement)</span>}
+            </p>
+          </div>
+
+          {/* NOUVEAU : Bouton Mois Suivant */}
+          <Link 
+            href={`?month=${nextMonth}&year=${nextYear}`} 
+            className="p-2 rounded-md border bg-card hover:bg-accent transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
 
@@ -127,7 +162,7 @@ export default async function CalendarPage() {
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
-            const isToday = day === today.getDate();
+            const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
             
             const dayEvents = events.filter((e) => {
               const eventDate = e.confirmedDate || e.optionDate1;
